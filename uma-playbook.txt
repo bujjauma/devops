@@ -1,0 +1,120 @@
+
+
+---
+- hosts: localmachine
+  connection: ssh
+  become: true
+  vars:
+    keypair: my_keypair 		##key name
+    instance_type: t2.micro
+    security_group: my_securitygroup
+    image: ami-ffc3e790			 ##Ubuntu-16.04LTS
+	subnet_id: Assign subnet-id	  ##vpc-subnet-id
+    region: us-east-1
+  - tasks:
+	 - pip:
+		name=boto		## add screatekey and access key in boto file and run it
+		
+	 - name: create an Ec2 instance
+	   ec2:
+         key_name: "{{keypair}}" 
+		 group: "{{ security_group }}"
+		 instance_type: "{{instance_type}}"
+		 image: "{{image}}"
+		 region: "{{ region }}"
+		 vpc_subnet_id: "{{subnet_id}}"
+		 assign_public_ip: yes
+		 wait=true
+		 count=2
+	   register: ec2-instance
+	   
+Goto ansible inventory file local host
+#cd /etc/ansible/hosts
+  [group_host]
+   MSR-test-instnce-1	<dynamic-ip-address-1>
+   MSR-test-instnce-2	<dynamic-ip-address-2>
+   
+   
+-hosts: group_host   
+- tasks:
+	- name: Install Git  and openssl-latest
+	  apt-get:
+	   name: "{{packages}}"
+	   state: latest
+	  vars:
+		packages:
+			- git
+			- openssl
+	- name: Install docker 
+		apt_repository: 
+			repo=deb [arch=amd64] https://download.docker.com/linux/ubuntu xenial stable
+			state=present
+			
+			
+	# sudo apt-get install docker-ce=18.03.*
+	- name: Install docker
+		apt:
+			name: docker-ce=18.03.*
+			state: present
+			
+	# sudo apt-get install docker-compose=1.8.*
+	- name: Install docker-compose
+		apt:
+			name: docker-compose=1.8.*
+			state: present
+			
+	- name: Install nvm-version0.33.2		## Install nvm-version0.33.2
+	  action: apt-get update
+	  action: apt-get install build-essential libssl-dev -y
+	  shell: curl https://raw.githubusercontent.com/creationix/nvm/v0.33.0/install.sh | bash
+	  shell: source ~/.profile
+	  
+	 - name: Install node-8.12.0			## Install node-8.12.0
+	   action: shell curl -sL https://deb.nodesource.com/setup_10.x | sudo bash -
+	   action: shell curl -sL https://deb.nodesource.com/setup_8.x | sudo bash -
+	   apt-get:
+	      name: nodes-8.12.0
+		  state: present
+	   
+	   
+	   
+	-tasks:
+	 - name: clone the website from git repository
+	 - git:
+			repo: "https://github.com/websample.git"
+			dest: /opt/gitrepo
+	 -docker_service:
+		name: Apache instllation
+		definition:
+			version: '2'
+			services:
+			   web:
+				 image: 'httpd'
+				 port:
+					-80:80
+				 volumes:
+					- /var/www/html:/opt/gitrepo/src/index.html
+		tags:
+			- MSR-test-instnce-1
+		
+	
+    - name: Install couchDatabase
+	- docker_service:
+	  definition: 
+	     version '2'
+		 services:
+		     db:
+			  image: 'apache/couchdb:2.1.1'
+			  port:
+				-5984:5984
+			  volumes:
+			    - ~/data:/opt/couchdata/data
+				- ~/etc/local.d:/opt/couchdb/etc/local.d
+		      environment:
+			     - COUCHDB_USER=admin
+				 - COUCHDB_PASSWORD=password
+		tags:
+			- MSR-test-instnce-2
+
+			
+		
