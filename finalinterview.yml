@@ -1,0 +1,65 @@
+--- #this playbook with install git,docker and instances
+- hosts: sampleintances
+  become: yes
+  connection: local
+  gatherfacts: no
+  tasks:
+  - name: install packade
+    apt: name=update state=latest.
+  - name: install python-pip library,git
+    apt: name: '{{item}}'
+    with_items
+     - python-pip
+     - python-dev
+     - git
+  - name:install python-boto library
+    pip: name=boto
+  - name: install ansible packges
+    apt: install ansible.
+  - name: create ec2 machine
+    ec2:
+    key_name: "linux"
+    instance_type: "t2.micro"
+    image: "ami-66ca1419"
+    wait: true
+    region: "us-east-1"
+    register: ec2
+  - debug: var=ec2
+  - name: Start docker on boot
+    systemd:
+     name: docker
+     state: started
+     enabled: yes
+  - name: Install docker packages
+    apt:
+     name: "{{ item }}"
+     state: latest
+     update_cache: yes
+   with_items:
+    - apt-transport-https
+    - ca-certificates
+    - curl
+    - docker-ce=18.06
+    - openssl
+    - software-properties-common
+  tags:
+    - docker
+  - name: Install docker-compose
+    apt:
+     name: docker-compose=1.8.*
+     state: latest
+     update_cache: yes
+  tags:
+    - dockercompose
+  - name:install nvm package
+    apt: name=https://raw.githubusercontent.com/creationix/nvm/v0.33.2/install.sh 
+  tags:
+    - nvm 
+  - name: install node.js
+    apt:  name=nodejs-8.12.0 state=latest
+  tags:
+    - node
+  - name:install apacheserver
+    apt: name=httpd state:present
+  tags:
+    - httpd
